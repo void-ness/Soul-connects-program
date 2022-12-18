@@ -55,7 +55,7 @@ pub fn update_stud(
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    let (pda, bump_seed) = Pubkey::find_program_address(&[initializer.key.as_ref()], program_id);
+    let (pda, _bump_seed) = Pubkey::find_program_address(&[initializer.key.as_ref()], program_id);
 
     if pda != *pda_account.key {
         msg!("invalid pda");
@@ -208,5 +208,88 @@ pub fn add_stud(
     msg!("comment count: {}", counter_data.counter);
     counter_data.serialize(&mut &mut pda_counter.data.borrow_mut()[..])?;
     msg!("counter Account Serialized");
+    Ok(())
+}
+
+pub fn add_comment(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    message: String,
+) -> ProgramResult {
+    msg!("Adding Comment....");
+    msg!("Comment: {}", message);
+
+    let account_info_iter = &mut accounts.iter();
+    let commenter = next_account_info(account_info_iter)?;
+    let pda_review = next_account_info(account_info_iter)?;
+    let pda_counter = next_account_info(account_info_iter)?;
+    let pda_comment = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
+    let mut counter_data =
+        try_from_slice_unchecked::<StudCommentCounter>(&pda_counter.data.borrow()).unwrap();
+
+    let comment_account_len: usize = StudComment::get_account_size(message.clone());
+
+    let rent = Rent::get()?;
+    let comment_rent_lamports = rent.minimum_balance(comment_account_len);
+
+    let (comment_account, comment_account_bump) = Pubkey::find_program_address(
+        &[
+            pda_review.key.as_ref(),
+            counter_data.counter.to_string().as_ref(),
+        ],
+        program_id,
+    );
+
+    if comment_account != *pda_comment.key {
+        msg!("invalid seeds for PDA");
+        return Err(ReviewError::InvalidPDA.into());
+    }
+
+    invoke_signed(
+        &system_instruction::create_account(
+            commenter.key,
+            pda_comment.key,
+            comment_rent_lamports,
+            comment_account_len.try_into().unwrap(),
+            program_id,
+        ),
+        &[
+            commenter.clone(),
+            pda_comment.clone(),
+            system_program.clone(),
+        ],
+        &[&[
+            pda_review.key.as_ref(),
+            counter_data.counter.to_string().as_ref(),
+            &[comment_account_bump],
+        ]],
+    )?;
+    msg!("comment account initialized");
+
+    msg!("borrowing data");
+    let mut comment_account_data =
+        try_from_slice_unchecked::<StudComment>(&pda_comment.data.borrow()).unwrap();
+
+    if comment_account_data.initialized {
+        msg!("Account already initialized");
+        return Err(ProgramError::AccountAlreadyInitialized);
+    }
+    comment_account_data.comment = message;
+    comment_account_data.discriminator = StudComment::DISCRIMINATOR.to_string();
+    comment_account_data.initialized = true;
+    comment_account_data.introduction = *pda_review.key; //the introduction which is being commented upon
+    comment_account_data.commenter = *commenter.key; //the commenter
+    comment_account_data.count = counter_data.counter + 1;
+
+    msg!("serializing account");
+    comment_account_data.serialize(&mut &mut pda_comment.data.borrow_mut()[..])?;
+    msg!("comment account serialized");
+
+    msg!("serializing counter account");
+    counter_data.counter += 1;
+    counter_data.serialize(&mut &mut pda_counter.data.borrow_mut()[..])?;
+    msg!("counter account serialized");
     Ok(())
 }
