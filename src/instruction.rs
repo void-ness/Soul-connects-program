@@ -15,7 +15,7 @@ struct StudInstructionPayload {
 
 #[derive(BorshDeserialize)]
 struct CommentPayload {
-    message: String,
+    comment: String,
 }
 
 impl StudInstruction {
@@ -42,7 +42,7 @@ impl StudInstruction {
             2 => {
                 let payload = CommentPayload::try_from_slice(rest).unwrap();
                 Self::AddComment {
-                    message: payload.message,
+                    message: payload.comment,
                 }
             }
             _ => return Err(ProgramError::InvalidInstructionData),
