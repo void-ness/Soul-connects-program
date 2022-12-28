@@ -237,7 +237,7 @@ pub fn add_comment(
     let (comment_account, comment_account_bump) = Pubkey::find_program_address(
         &[
             pda_review.key.as_ref(),
-            counter_data.counter.to_string().as_ref(),
+            counter_data.counter.to_be_bytes().as_ref(),
         ],
         program_id,
     );
@@ -262,20 +262,20 @@ pub fn add_comment(
         ],
         &[&[
             pda_review.key.as_ref(),
-            counter_data.counter.to_string().as_ref(),
+            counter_data.counter.to_be_bytes().as_ref(),
             &[comment_account_bump],
         ]],
     )?;
-    msg!("comment account initialized");
+    msg!("comment account created");
 
     msg!("borrowing data");
     let mut comment_account_data =
         try_from_slice_unchecked::<StudComment>(&pda_comment.data.borrow()).unwrap();
 
-    if comment_account_data.initialized {
-        msg!("Account already initialized");
-        return Err(ProgramError::AccountAlreadyInitialized);
-    }
+    // if comment_account_data.initialized {
+    //     msg!("Account already initialized");
+    //     return Err(ProgramError::AccountAlreadyInitialized);
+    // }
     comment_account_data.comment = message;
     comment_account_data.discriminator = StudComment::DISCRIMINATOR.to_string();
     comment_account_data.initialized = true;
