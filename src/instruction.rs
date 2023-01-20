@@ -5,6 +5,7 @@ pub enum StudInstruction {
     AddStudent { name: String, message: String },
     UpdateStudent { name: String, message: String },
     AddComment { message: String },
+    InitializeMint,
 }
 
 #[derive(BorshDeserialize)]
@@ -45,6 +46,7 @@ impl StudInstruction {
                     message: payload.comment,
                 }
             }
+            3 => Self::InitializeMint,
             _ => return Err(ProgramError::InvalidInstructionData),
         })
     }
