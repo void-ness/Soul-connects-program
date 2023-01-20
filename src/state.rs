@@ -34,19 +34,19 @@ impl Sealed for StudAccountState {}
 
 impl IsInitialized for StudAccountState {
     fn is_initialized(&self) -> bool {
-        self.is_initialized()
+        self.initialized
     }
 }
 
 impl IsInitialized for StudCommentCounter {
     fn is_initialized(&self) -> bool {
-        self.is_initialized()
+        self.initialized
     }
 }
 
 impl IsInitialized for StudComment {
     fn is_initialized(&self) -> bool {
-        self.is_initialized()
+        self.initialized
     }
 }
 
